@@ -1,8 +1,10 @@
+
 // IMPORTS
 import { initHomePage } from "./pages/homePage.js";
 import { initRiskPage } from "./pages/riskPage.js";
 import { initReviewPage } from "./pages/reviewPage.js";
 import { initRiskReferencePage } from "./pages/riskReferencePage.js";
+import { initSearchPage } from "./pages/searchPage.js";
 
 // BUILD
 /** Reads the current page key from the URL */
@@ -25,6 +27,10 @@ async function initApp() {
   }
   if (page === "reference") {
     await initRiskReferencePage();
+    return;
+  }
+  if (page === "search") {
+    await initSearchPage();
     return;
   }
   await initHomePage();

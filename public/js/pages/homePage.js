@@ -1,4 +1,5 @@
-// IMPORTS
+
+ // IMPORTS
 import { createPageRuntime } from "../core/pageRuntime.js";
 import { loadRiskTableRegistry } from "../core/riskData.js";
 import { buildIntroPane } from "../panes/IntroPane.js";
@@ -24,7 +25,7 @@ export async function initHomePage() {
   document.title = home.title || HOME_TITLE;
   const introSection = document.createElement("section");
   introSection.className = "intro-hero";
-  const introPane = buildIntroPane({ html: home.introHtml || "", className: "intro-text" }, api);
+  const introPane = buildIntroPane({ text: home.intro || [], className: "intro-text" }, api);
   const cardPane = buildIntroCardPane({ analyses: registry.analyses || [], className: "risk-analysis-grid" }, api);
   introSection.appendChild(introPane.node);
   introSection.appendChild(cardPane.node);

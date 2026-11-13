@@ -1,3 +1,4 @@
+
 // STATE
 const DATA_URLS = Object.freeze({
   riskTables: "data/riskTables.json",
@@ -40,6 +41,7 @@ export async function loadRiskTableRegistry() {
   return {
     home: registry?.home || {},
     reference: registry?.reference || {},
+    search: registry?.search || {},
     analyses: Array.isArray(registry?.analyses) ? registry.analyses : []
   };
 }
