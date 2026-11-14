@@ -26,7 +26,14 @@ export async function initHomePage() {
   const introSection = document.createElement("section");
   introSection.className = "intro-hero";
   const introPane = buildIntroPane({ text: home.intro || [], className: "intro-text" }, api);
-  const cardPane = buildIntroCardPane({ analyses: registry.analyses || [], className: "risk-analysis-grid" }, api);
+  const categories = (registry.categories || []).map((category) => ({
+    id: category.id,
+    title: category.title || category.id,
+    description: category.description || "",
+    analyses: category.analyses || [],
+    link: "index.html?page=category&category=" + encodeURIComponent(category.id || "")
+  }));
+  const cardPane = buildIntroCardPane({ categories, className: "risk-analysis-grid" }, api);
   introSection.appendChild(introPane.node);
   introSection.appendChild(cardPane.node);
   shell.contentHost.appendChild(introSection);

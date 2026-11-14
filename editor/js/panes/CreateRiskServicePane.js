@@ -1,4 +1,5 @@
-// IMPORTS
+
+ // IMPORTS
 import { el } from "../../../js/core/helpers.js";
 import { linesText, textLines } from "../core/editorData.js";
 
@@ -36,6 +37,24 @@ function makeTextarea(value = "") {
   textarea.rows = 4;
   textarea.value = value;
   return textarea;
+}
+
+
+/** Builds the category selector from the Risk Analysis registry */
+function makeCategorySelect(categories) {
+  const select = document.createElement("select");
+  select.className = "rd-input";
+  const placeholder = document.createElement("option");
+  placeholder.value = "";
+  placeholder.textContent = "Select Category";
+  select.appendChild(placeholder);
+  (categories || []).forEach((category) => {
+    const option = document.createElement("option");
+    option.value = category.id;
+    option.textContent = category.title || category.id;
+    select.appendChild(option);
+  });
+  return select;
 }
 
 
@@ -113,9 +132,11 @@ function defaultControlFromTitle(title) {
 
 
 /** Renders the create-new Risk Analysis pane */
-export function renderCreateRiskServicePane({ host, actions }) {
+export function renderCreateRiskServicePane({ state, host, actions }) {
   const pane = el("section", "pane editor-pane");
   pane.appendChild(el("h2", "rt-title", "Add New Risk Analysis"));
+  const categories = state.data?.riskTables?.categories || [];
+  const category = makeCategorySelect(categories);
   const serviceId = makeInput("");
   const title = makeInput("New Risk Analysis");
   const description = makeTextarea("Describe what this Risk Analysis helps review.");
@@ -124,51 +145,44 @@ export function renderCreateRiskServicePane({ host, actions }) {
   const controlsHost = el("div", "editor-controls");
   const identityGroup = el("div", "form-grid");
   identityGroup.appendChild(el("h3", "rt-subtitle", "Risk Analysis"));
+  identityGroup.appendChild(makeField("Category", category));
   identityGroup.appendChild(makeField("Risk Analysis ID", serviceId));
   identityGroup.appendChild(makeField("Title", title));
   identityGroup.appendChild(makeField("Description", description, { wide: true }));
   pane.appendChild(identityGroup);
-
   function renderControlDrafts() {
     controlsHost.replaceChildren();
     controlDrafts.forEach((draft, index) => {
       const controlSection = el("section", "editor-control-group");
       controlSection.appendChild(el("h3", "rt-subtitle editor-control-title", "Control " + String(index + 1)));
-
       const controlGroup = el("div", "risk-value-grid");
       controlGroup.appendChild(el("h3", "rt-subtitle", "Control"));
       controlGroup.appendChild(makeField("ID", draft.controlId));
       controlGroup.appendChild(makeField("Label", draft.controlLabel));
       controlGroup.appendChild(makeField("Default", draft.status));
       controlSection.appendChild(controlGroup);
-
       const likelihoodGroup = el("div", "risk-value-grid");
       likelihoodGroup.appendChild(el("h3", "rt-subtitle", "Likelihood"));
       likelihoodGroup.appendChild(makeField("Exploitability", draft.scores.exploitability));
       likelihoodGroup.appendChild(makeField("Exposure", draft.scores.exposure));
       likelihoodGroup.appendChild(makeField("Prevalence", draft.scores.prevalence));
       controlSection.appendChild(likelihoodGroup);
-
       const impactGroup = el("div", "risk-value-grid");
       impactGroup.appendChild(el("h3", "rt-subtitle", "Impact"));
       impactGroup.appendChild(makeField("Confidentiality", draft.scores.confidentiality));
       impactGroup.appendChild(makeField("Integrity", draft.scores.integrity));
       impactGroup.appendChild(makeField("Availability", draft.scores.availability));
       controlSection.appendChild(impactGroup);
-
       const notesGroup = el("div", "form-grid form-grid--single");
       notesGroup.appendChild(el("h3", "rt-subtitle", "Pros and Cons"));
       notesGroup.appendChild(makeField("Pros", draft.pros, { wide: true }));
       notesGroup.appendChild(makeField("Cons", draft.cons, { wide: true }));
       controlSection.appendChild(notesGroup);
-
       controlsHost.appendChild(controlSection);
     });
   }
-
   renderControlDrafts();
   pane.appendChild(controlsHost);
-
   const actionsRow = el("div", "re-actions");
   const addControl = document.createElement("button");
   addControl.type = "button";
@@ -198,7 +212,12 @@ export function renderCreateRiskServicePane({ host, actions }) {
   create.className = "re-button re-button-save";
   create.textContent = "Save Risk Assessment";
   create.addEventListener("click", () => {
+    if (!category.value) {
+      category.focus();
+      return;
+    }
     actions.createService({
+      categoryId: category.value,
       serviceId: serviceId.value.trim(),
       title: title.value.trim(),
       description: description.value,

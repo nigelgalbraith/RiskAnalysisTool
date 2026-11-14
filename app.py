@@ -1,3 +1,4 @@
+
 from __future__ import annotations
 
 import json
@@ -105,40 +106,64 @@ def validate_risk_registry(data: Any) -> list[str]:
     require(errors, is_object(data), "riskTables must be an object.")
     if not is_object(data):
         return errors
-    home = data.get("home")
-    require(errors, is_object(home), "riskTables.home must be an object.")
-    if is_object(home):
-        require(errors, isinstance(home.get("title"), str) and home["title"].strip(), "riskTables.home.title is required.")
-        require(errors, isinstance(home.get("introHtml"), str), "riskTables.home.introHtml must be text.")
+    for section_name in ("home", "reference", "search"):
+        section = data.get(section_name)
+        section_path = f"riskTables.{section_name}"
+        require(errors, is_object(section), f"{section_path} must be an object.")
+        if not is_object(section):
+            continue
+        require(errors, isinstance(section.get("title"), str) and bool(section.get("title", "").strip()), f"{section_path}.title is required.")
+        validate_text_list(errors, section.get("intro"), f"{section_path}.intro")
     reference = data.get("reference")
-    require(errors, is_object(reference), "riskTables.reference must be an object.")
     if is_object(reference):
-        require(errors, isinstance(reference.get("title"), str) and reference["title"].strip(), "riskTables.reference.title is required.")
-        require(errors, isinstance(reference.get("introHtml"), str), "riskTables.reference.introHtml must be text.")
-    analyses = data.get("analyses")
-    require(errors, isinstance(analyses, list), "riskTables.analyses must be a list.")
-    if not isinstance(analyses, list):
+        validate_text_list(errors, reference.get("items"), "riskTables.reference.items")
+    categories = data.get("categories")
+    require(errors, isinstance(categories, list) and len(categories) > 0, "riskTables.categories must be a non-empty list.")
+    if not isinstance(categories, list):
         return errors
+    seen_categories: set[str] = set()
     seen_ids: set[str] = set()
-    for index, analysis in enumerate(analyses):
-        item_path = f"riskTables.analyses[{index}]"
-        require(errors, is_object(analysis), f"{item_path} must be an object.")
-        if not is_object(analysis):
+    for category_index, category in enumerate(categories):
+        category_path = f"riskTables.categories[{category_index}]"
+        require(errors, is_object(category), f"{category_path} must be an object.")
+        if not is_object(category):
             continue
-        risk_id = analysis.get("id")
-        require(errors, isinstance(risk_id, str) and risk_id.strip(), f"{item_path}.id is required.")
-        if not isinstance(risk_id, str):
+        category_id = category.get("id")
+        category_errors = validate_risk_id(category_id, "Category ID")
+        errors.extend(f"{category_path}: {message}" for message in category_errors)
+        if isinstance(category_id, str):
+            if category_id in seen_categories:
+                errors.append(f"riskTables.categories contains duplicate id {category_id}.")
+            seen_categories.add(category_id)
+        require(errors, isinstance(category.get("title"), str) and bool(category.get("title", "").strip()), f"{category_path}.title is required.")
+        require(errors, isinstance(category.get("description"), str), f"{category_path}.description must be text.")
+        validate_text_list(errors, category.get("intro"), f"{category_path}.intro")
+        analyses = category.get("analyses")
+        require(errors, isinstance(analyses, list), f"{category_path}.analyses must be a list.")
+        if not isinstance(analyses, list):
             continue
-        require(errors, bool(SAFE_RISK_ID_PATTERN.fullmatch(risk_id)), f"{item_path}.id may contain only letters, numbers, underscores, or hyphens and must start with a letter.")
-        if risk_id in seen_ids:
-            errors.append(f"riskTables.analyses contains duplicate id {risk_id}.")
-        seen_ids.add(risk_id)
-        require(errors, isinstance(analysis.get("title"), str) and analysis["title"].strip(), f"{item_path}.title is required.")
-        require(errors, isinstance(analysis.get("description"), str), f"{item_path}.description must be text.")
-        require(errors, analysis.get("path") == f"riskTables/{risk_id}.json", f"{item_path}.path must reference riskTables/{risk_id}.json.")
-        require(errors, isinstance(analysis.get("link"), str) and analysis["link"].strip(), f"{item_path}.link is required.")
-        require(errors, isinstance(analysis.get("introHtml"), str), f"{item_path}.introHtml must be text.")
-        require(errors, risk_table_path(risk_id).is_file(), f"riskTables/{risk_id}.json is missing.")
+        for index, analysis in enumerate(analyses):
+            item_path = f"{category_path}.analyses[{index}]"
+            require(errors, is_object(analysis), f"{item_path} must be an object.")
+            if not is_object(analysis):
+                continue
+            risk_id = analysis.get("id")
+            require(errors, isinstance(risk_id, str) and bool(risk_id.strip()), f"{item_path}.id is required.")
+            if not isinstance(risk_id, str):
+                continue
+            valid_id = bool(SAFE_RISK_ID_PATTERN.fullmatch(risk_id))
+            require(errors, valid_id, f"{item_path}.id may contain only letters, numbers, underscores, or hyphens and must start with a letter.")
+            if risk_id in seen_ids:
+                errors.append(f"riskTables.categories contains duplicate Risk Analysis id {risk_id}.")
+            seen_ids.add(risk_id)
+            require(errors, isinstance(analysis.get("title"), str) and bool(analysis.get("title", "").strip()), f"{item_path}.title is required.")
+            require(errors, isinstance(analysis.get("description"), str), f"{item_path}.description must be text.")
+            require(errors, analysis.get("path") == f"riskTables/{risk_id}.json", f"{item_path}.path must reference riskTables/{risk_id}.json.")
+            require(errors, analysis.get("link") == f"index.html?page=risk&service={risk_id}", f"{item_path}.link must reference the Risk Analysis.")
+            validate_text_list(errors, analysis.get("intro"), f"{item_path}.intro")
+            validate_text_list(errors, analysis.get("items"), f"{item_path}.items")
+            if valid_id:
+                require(errors, risk_table_path(risk_id).is_file(), f"riskTables/{risk_id}.json is missing.")
     return errors
 
 
@@ -189,13 +214,29 @@ def load_risk_registry() -> dict[str, Any]:
     return read_json(RISK_TABLE_REGISTRY_PATH)
 
 
-def find_risk_analysis_entry(registry: dict[str, Any], risk_id: str) -> dict[str, Any] | None:
-    analyses = registry.get("analyses") if is_object(registry) else []
-    if not isinstance(analyses, list):
+def find_risk_category_entry(registry: dict[str, Any], category_id: str) -> dict[str, Any] | None:
+    categories = registry.get("categories") if is_object(registry) else []
+    if not isinstance(categories, list):
         return None
-    for analysis in analyses:
-        if is_object(analysis) and analysis.get("id") == risk_id:
-            return analysis
+    for category in categories:
+        if is_object(category) and category.get("id") == category_id:
+            return category
+    return None
+
+
+def find_risk_analysis_entry(registry: dict[str, Any], risk_id: str) -> dict[str, Any] | None:
+    categories = registry.get("categories") if is_object(registry) else []
+    if not isinstance(categories, list):
+        return None
+    for category in categories:
+        if not is_object(category):
+            continue
+        analyses = category.get("analyses")
+        if not isinstance(analyses, list):
+            continue
+        for analysis in analyses:
+            if is_object(analysis) and analysis.get("id") == risk_id:
+                return analysis
     return None
 
 
@@ -204,13 +245,16 @@ def validate_create_risk_payload(payload: Any, registry: dict[str, Any]) -> tupl
     if not is_object(payload):
         return ["Request body must be JSON."], "", []
     risk_id = str(payload.get("serviceId") or "").strip()
-    title = str(payload.get("title") or "").strip()
-    description = str(payload.get("description") or "")
+    category_id = str(payload.get("categoryId") or "").strip()
+    title = payload.get("title")
+    description = payload.get("description")
     controls = payload.get("controls")
     errors.extend(validate_risk_id(risk_id))
+    require(errors, bool(category_id), "Category is required.")
+    require(errors, find_risk_category_entry(registry, category_id) is not None, "Unknown Risk Analysis category: " + category_id)
     if find_risk_analysis_entry(registry, risk_id):
         errors.append(f'Risk Analysis "{risk_id}" already exists.')
-    require(errors, bool(title), "Title is required.")
+    require(errors, isinstance(title, str) and bool(title.strip()), "Title is required.")
     require(errors, isinstance(description, str), "Description must be text.")
     require(errors, isinstance(controls, list) and len(controls) > 0, "At least one risk control is required.")
     if isinstance(controls, list):
@@ -218,14 +262,15 @@ def validate_create_risk_payload(payload: Any, registry: dict[str, Any]) -> tupl
     return errors, risk_id, controls if isinstance(controls, list) else []
 
 
-def build_registry_entry(payload: dict[str, Any], risk_id: str) -> dict[str, str]:
+def build_registry_entry(payload: dict[str, Any], risk_id: str) -> dict[str, Any]:
     return {
         "id": risk_id,
         "title": str(payload.get("title") or "").strip(),
         "description": str(payload.get("description") or ""),
         "path": f"riskTables/{risk_id}.json",
         "link": f"index.html?page=risk&service={risk_id}",
-        "introHtml": ""
+        "intro": [],
+        "items": []
     }
 
 
@@ -299,10 +344,10 @@ def create_risk_table():
         path = risk_table_path(risk_id)
         if path.exists():
             return jsonify({"errors": [f"Risk Analysis file already exists: {risk_id}"]}), 400
-        next_registry = {
-            **registry,
-            "analyses": [*registry.get("analyses", []), build_registry_entry(payload, risk_id)]
-        }
+        category_id = str(payload.get("categoryId") or "").strip()
+        next_registry = json.loads(json.dumps(registry))
+        category = find_risk_category_entry(next_registry, category_id)
+        category["analyses"].append(build_registry_entry(payload, risk_id))
         atomic_write_json(path, controls)
         registry_errors = validate_risk_registry(next_registry)
         if registry_errors:

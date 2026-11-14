@@ -1,3 +1,4 @@
+
 // IMPORTS
 import { createPageRuntime } from "../core/pageRuntime.js";
 import { getServiceKey, titleCase } from "../core/helpers.js";
@@ -43,11 +44,10 @@ export async function initRiskPage() {
   }
   const entry = await loadRiskAnalysisEntry(service);
   const displayName = entry.title || (titleCase(service) + " Risk Analysis");
-  const introHtml = entry.introHtml || "";
   if (heading) heading.textContent = displayName;
   document.title = displayName;
   const introPane = buildIntroPane({
-    html: introHtml,
+    text: entry.intro || [],
     className: "intro-text",
     id: "introHost"
   }, api);

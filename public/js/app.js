@@ -1,6 +1,7 @@
 
-// IMPORTS
+ // IMPORTS
 import { initHomePage } from "./pages/homePage.js";
+import { initCategoryPage } from "./pages/categoryPage.js";
 import { initRiskPage } from "./pages/riskPage.js";
 import { initReviewPage } from "./pages/reviewPage.js";
 import { initRiskReferencePage } from "./pages/riskReferencePage.js";
@@ -17,6 +18,10 @@ function getPageKey() {
 /** Initializes the application router */
 async function initApp() {
   const page = getPageKey();
+  if (page === "category") {
+    await initCategoryPage();
+    return;
+  }
   if (page === "risk") {
     await initRiskPage();
     return;

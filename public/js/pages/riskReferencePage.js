@@ -1,4 +1,5 @@
-// IMPORTS
+
+ // IMPORTS
 import { createPageRuntime } from "../core/pageRuntime.js";
 import { getServiceKey } from "../core/helpers.js";
 import { loadRiskTableRegistry } from "../core/riskData.js";
@@ -33,8 +34,7 @@ export async function initRiskReferencePage() {
   }
   document.title = BASE_TITLE;
   const registry = await loadRiskTableRegistry();
-  const introHtml = registry.reference?.introHtml || "";
-  const introPane = buildIntroPane({ html: introHtml, className: "intro-text", id: "introHost" }, api);
+  const introPane = buildIntroPane({ text: registry.reference?.intro || [], className: "intro-text", id: "introHost" }, api);
   const definitionsPane = buildRiskDefinitionsPane({ id: "riskDefinitionsHost" }, api);
   const summaryPane = buildRiskSummaryListPane({ id: "riskSummaryHost" }, api);
   shell.contentHost.appendChild(introPane.node);

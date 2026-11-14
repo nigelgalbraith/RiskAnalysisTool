@@ -1,5 +1,5 @@
 
-// STATE
+ // STATE
 const DATA_URLS = Object.freeze({
   riskTables: "data/riskTables.json",
   riskDefinitions: "data/riskDefinitions.json",
@@ -34,15 +34,18 @@ export function loadRiskTables() {
 }
 
 
-/** Loads the registry of available Risk Analysis IDs */
+/** Loads the registry of available Risk Analysis IDs and categories */
 export async function loadRiskTableRegistry() {
   if (!riskRegistryPromise) riskRegistryPromise = loadRiskDataset("riskTables");
   const registry = await riskRegistryPromise;
+  const categories = Array.isArray(registry?.categories) ? registry.categories : [];
+  const analyses = categories.flatMap((category) => Array.isArray(category?.analyses) ? category.analyses : []);
   return {
     home: registry?.home || {},
     reference: registry?.reference || {},
     search: registry?.search || {},
-    analyses: Array.isArray(registry?.analyses) ? registry.analyses : []
+    categories,
+    analyses
   };
 }
 

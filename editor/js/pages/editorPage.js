@@ -1,3 +1,4 @@
+
 // IMPORTS
 import { el } from "../../../js/core/helpers.js";
 import { createEditorPageRuntime } from "../core/pageRuntime.js";
@@ -45,6 +46,16 @@ function uniqueControlId(rows) {
     control = defaultControlFromTitle("Control " + String(index));
   }
   return control;
+}
+
+
+/** Normalizes the category registry for existing editor panes */
+function normalizeEditorData(loaded) {
+  const data = clone(loaded);
+  const registry = data.riskTables || {};
+  const categories = Array.isArray(registry.categories) ? registry.categories : [];
+  registry.analyses = categories.flatMap((category) => Array.isArray(category?.analyses) ? category.analyses : []);
+  return data;
 }
 
 
@@ -154,7 +165,7 @@ async function saveSelectedRiskAnalysis() {
 /** Reloads editor data after a successful API mutation */
 async function reloadData() {
   const loaded = await loadEditorRiskData();
-  state.data = clone(loaded);
+  state.data = normalizeEditorData(loaded);
 }
 
 
@@ -223,7 +234,7 @@ export async function initEditorPage() {
   showStatus("Loading editor data...");
   try {
     const loaded = await loadEditorRiskData();
-    state.data = clone(loaded);
+    state.data = normalizeEditorData(loaded);
     state.selectedService = state.data.riskTables?.analyses?.[0]?.id || "";
     await loadSelectedRiskAnalysis();
     state.dirty = false;
