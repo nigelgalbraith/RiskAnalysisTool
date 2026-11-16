@@ -591,6 +591,13 @@ button:hover { filter: brightness(1.08); }
 
 
 /* =========================
+   Navigation: Mobile Hamburger
+   ========================= */
+.nav-hamburger {
+  display: none;
+}
+
+/* =========================
    Search: Risk Analyses
    ========================= */
 .search-input {
@@ -727,6 +734,41 @@ button:hover { filter: brightness(1.08); }
    Responsive
    ========================= */
 @media (max-width: 600px) {
+
+  .nav {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .nav-hamburger {
+    display: block;
+    align-self: center;
+    padding: 0.4rem 0.8rem;
+    font-size: 1.5rem;
+    color: var(--text);
+    background: var(--surface-raised);
+    border: 1px solid var(--border);
+    border-radius: 0.6rem;
+    cursor: pointer;
+  }
+
+  .nav .nav-links {
+    display: none;
+    flex-direction: column;
+    gap: 0.5rem;
+    width: 100%;
+    padding-top: 0.5rem;
+  }
+
+  .nav.menu-open .nav-links {
+    display: flex;
+  }
+
+  .nav .nav-links a {
+    display: block;
+    text-align: center;
+  }
+
   .split {
     display: flex;
     flex-direction: column;
